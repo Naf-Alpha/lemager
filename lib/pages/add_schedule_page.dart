@@ -168,11 +168,16 @@ class _AddSchedulePageState extends State<AddSchedulePage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        toolbarHeight: 100,
+        leadingWidth: 90,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveSchedule,
-            color: Colors.pink,
+          Padding(
+            padding: const EdgeInsets.only(right: 25),
+            child: IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: _saveSchedule,
+              color: Colors.pink,
+            ),
           ),
         ],
       ),

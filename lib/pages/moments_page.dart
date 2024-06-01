@@ -50,6 +50,33 @@ class _MomentsPageState extends State<MomentsPage> {
     }
   }
 
+  Future<void> _confirmDeleteImage(BuildContext context, Moment moment) async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Delete'),
+          content: const Text('Are you sure you want to delete this image?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _deleteImage(moment);
+              },
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _deleteImage(Moment moment) async {
     await DBHelper().deleteMoment(moment.id!);
     await _fetchMoments();
@@ -139,6 +166,7 @@ class _MomentsPageState extends State<MomentsPage> {
         title: const Text('Moments', style: TextStyle(color: Colors.black)),
         elevation: 0,
         backgroundColor: Colors.transparent,
+        toolbarHeight: 100,
       ),
       body: CustomScrollView(
         slivers: _moments.entries.map((entry) {
@@ -200,7 +228,8 @@ class _MomentsPageState extends State<MomentsPage> {
                                 IconButton(
                                   icon: const Icon(Icons.delete),
                                   color: Colors.red,
-                                  onPressed: () => _deleteImage(moment),
+                                  onPressed: () =>
+                                      _confirmDeleteImage(context, moment),
                                 ),
                               ],
                             ),

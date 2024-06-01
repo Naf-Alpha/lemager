@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../db_helper.dart';
 import '../models/schedule.dart';
 import 'add_schedule_page.dart';
+import 'schedule_detail_page.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({Key? key}) : super(key: key);
@@ -39,7 +41,8 @@ class _CalendarPageState extends State<CalendarPage> {
     Map<DateTime, List<Schedule>> data = {};
     for (var schedule in schedules) {
       DateTime date = DateTime(schedule.startDate.year,
-          schedule.startDate.month, schedule.startDate.day);
+              schedule.startDate.month, schedule.startDate.day)
+          .toLocal();
       if (data[date] == null) data[date] = [];
       data[date]!.add(schedule);
     }
@@ -47,15 +50,33 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 
   List<Schedule> _getEventsForDay(DateTime day) {
-    return _events[day] ?? [];
+    DateTime date = DateTime(day.year, day.month, day.day).toLocal();
+    return _events[date] ?? [];
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     setState(() {
-      _selectedDay = selectedDay;
+      _selectedDay =
+          DateTime(selectedDay.year, selectedDay.month, selectedDay.day)
+              .toLocal();
       _focusedDay = focusedDay;
-      _selectedEvents = _getEventsForDay(selectedDay);
+      _selectedEvents = _getEventsForDay(_selectedDay);
     });
+  }
+
+  void _deleteSchedule(Schedule schedule) async {
+    if (schedule.id != null) {
+      await DBHelper().deleteSchedule(schedule.id!);
+      _fetchSchedules(); // Refresh the schedules after deletion
+    } else {
+      // Handle the case where schedule.id is null
+      print('Schedule ID is null');
+    }
+  }
+
+  Color _getContrastingTextColor(Color backgroundColor) {
+    double luminance = backgroundColor.computeLuminance();
+    return luminance > 0.5 ? Colors.black : Colors.white;
   }
 
   @override
@@ -66,6 +87,7 @@ class _CalendarPageState extends State<CalendarPage> {
         title: const Text('Calendar', style: TextStyle(color: Colors.black)),
         elevation: 0,
         backgroundColor: Colors.transparent,
+        toolbarHeight: 100,
       ),
       body: Column(
         children: [
@@ -87,10 +109,10 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
             ),
             headerStyle: HeaderStyle(
-              formatButtonVisible: false, // Hide the 2-week and other formats
-              titleCentered: true, // Center the title
+              formatButtonVisible: false,
+              titleCentered: true,
               titleTextFormatter: (date, locale) =>
-                  DateFormat.yMMMM(locale).format(date), // Format the title
+                  DateFormat.yMMMM(locale).format(date),
               titleTextStyle: const TextStyle(
                 fontSize: 20.0,
                 fontWeight: FontWeight.bold,
@@ -105,15 +127,111 @@ class _CalendarPageState extends State<CalendarPage> {
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = _selectedEvents[index];
-                      return Card(
-                        child: ListTile(
-                          title: Text(event.title),
-                          subtitle: Text(
-                            '${DateFormat.yMMMd().add_jm().format(event.startDate)} at ${event.location}',
+                      final eventColor = Color(event.color);
+                      final textColor = _getContrastingTextColor(eventColor);
+
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ScheduleDetailPage(
+                                schedule: event,
+                                onDelete: () {
+                                  _deleteSchedule(event); // Delete the event
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(
+                                  width: 20.0), // Add padding to the left
+                              Column(
+                                children: [
+                                  Text(
+                                    DateFormat.E().format(event.startDate),
+                                    style: const TextStyle(
+                                        fontSize: 20.0,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4.0),
+                                  Container(
+                                    width: 35,
+                                    height: 35,
+                                    decoration: BoxDecoration(
+                                      color: eventColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      DateFormat.d().format(event.startDate),
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 20.0),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.black),
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      if (event.imagePath1.isNotEmpty)
+                                        Container(
+                                          width: 50,
+                                          height: 50,
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(8.0),
+                                            image: DecorationImage(
+                                              image: FileImage(
+                                                  File(event.imagePath1)),
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        ),
+                                      if (event.imagePath1.isNotEmpty)
+                                        const SizedBox(width: 20.0),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              event.title,
+                                              style: const TextStyle(
+                                                fontSize: 20.0,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              '${DateFormat.jm().format(event.startDate)} - ${DateFormat.jm().format(event.endDate)}',
+                                              style: const TextStyle(
+                                                  fontSize: 14.0,
+                                                  letterSpacing: 1.0),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          onTap: () {
-                            // Optionally, navigate to a detailed view of the schedule
-                          },
                         ),
                       );
                     },
@@ -128,7 +246,7 @@ class _CalendarPageState extends State<CalendarPage> {
               builder: (context) => AddSchedulePage(initialDate: _selectedDay),
             ),
           );
-          _fetchSchedules(); // Refresh schedules after adding a new one
+          _fetchSchedules();
         },
         child: const Icon(Icons.add),
       ),

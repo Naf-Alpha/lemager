@@ -98,6 +98,16 @@ class DBHelper {
     );
   }
 
+  Future<void> updateSchedule(Schedule schedule) async {
+    final db = await database;
+    await db.update(
+      'schedules',
+      schedule.toMap(),
+      where: 'id = ?',
+      whereArgs: [schedule.id],
+    );
+  }
+
   Future<List<Schedule>> getSchedules() async {
     final db = await database;
     final maps = await db.query('schedules');

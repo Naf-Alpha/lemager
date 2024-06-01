@@ -2,18 +2,18 @@ import 'dart:convert';
 
 class Schedule {
   final int? id;
-  final String title;
-  final String description;
+  late final String title;
+  late final String description;
   final String imagePath1;
   final String imagePath2;
   final String imagePath3;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String location;
-  final int color;
-  final String dressCode;
+  late final DateTime startDate;
+  late final DateTime endDate;
+  late final String location;
+  late final int color;
+  late final String dressCode;
   final bool allDay;
-  final List<Map<String, String>> customFields;
+  late final List<Map<String, String>> customFields;
 
   Schedule({
     this.id,
@@ -63,8 +63,11 @@ class Schedule {
       color: map['color'],
       dressCode: map['dressCode'],
       allDay: map['allDay'] == 1,
-      customFields:
-          List<Map<String, String>>.from(jsonDecode(map['customFields'])),
+      customFields: List<Map<String, String>>.from(
+        (jsonDecode(map['customFields']) as List).map(
+          (item) => Map<String, String>.from(item),
+        ),
+      ),
     );
   }
 }
