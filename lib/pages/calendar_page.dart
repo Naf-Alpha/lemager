@@ -74,6 +74,10 @@ class _CalendarPageState extends State<CalendarPage> {
     }
   }
 
+  void _updateSchedule(Schedule newSchedule) {
+    _fetchSchedules(); // Refresh the schedules after editing
+  }
+
   Color _getContrastingTextColor(Color backgroundColor) {
     double luminance = backgroundColor.computeLuminance();
     return luminance > 0.5 ? Colors.black : Colors.white;
@@ -131,17 +135,23 @@ class _CalendarPageState extends State<CalendarPage> {
                       final textColor = _getContrastingTextColor(eventColor);
 
                       return GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
+                        onTap: () async {
+                          final editedSchedule =
+                              await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => ScheduleDetailPage(
                                 schedule: event,
                                 onDelete: () {
                                   _deleteSchedule(event); // Delete the event
                                 },
+                                onEdit: _updateSchedule,
                               ),
                             ),
                           );
+
+                          if (editedSchedule != null) {
+                            _updateSchedule(editedSchedule);
+                          }
                         },
                         child: Padding(
                           padding: const EdgeInsets.all(10.0),

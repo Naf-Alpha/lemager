@@ -4,15 +4,18 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import '../models/schedule.dart';
+import 'edit_schedule_page.dart';
 
 class ScheduleDetailPage extends StatelessWidget {
   final Schedule schedule;
   final VoidCallback onDelete;
+  final ValueChanged<Schedule> onEdit;
 
   const ScheduleDetailPage({
     Key? key,
     required this.schedule,
     required this.onDelete,
+    required this.onEdit,
   }) : super(key: key);
 
   bool useWhiteForeground(Color backgroundColor, {double bias = 0.0}) {
@@ -60,6 +63,19 @@ class ScheduleDetailPage extends StatelessWidget {
         true); // Close the detail page and return true to indicate deletion
   }
 
+  void _editSchedule(BuildContext context) async {
+    final editedSchedule = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EditSchedulePage(schedule: schedule),
+      ),
+    );
+
+    if (editedSchedule != null) {
+      onEdit(editedSchedule); // Notify the parent widget about the edit
+      Navigator.of(context).pop(editedSchedule); // Return edited schedule
+    }
+  }
+
   void _openFullScreenImage(BuildContext context, String imagePath) {
     Navigator.push(
       context,
@@ -82,6 +98,13 @@ class ScheduleDetailPage extends StatelessWidget {
         toolbarHeight: 100,
         leadingWidth: 90,
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 25),
+            child: IconButton(
+              icon: const Icon(Icons.edit, color: Colors.black),
+              onPressed: () => _editSchedule(context),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 25),
             child: IconButton(
