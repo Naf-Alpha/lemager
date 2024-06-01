@@ -1,0 +1,138 @@
+import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import '../db_helper.dart';
+import '../models/schedule.dart';
+import 'add_schedule_page.dart';
+
+class CalendarPage extends StatefulWidget {
+  const CalendarPage({Key? key}) : super(key: key);
+
+  @override
+  _CalendarPageState createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends State<CalendarPage> {
+  late Map<DateTime, List<Schedule>> _events;
+  late List<Schedule> _selectedEvents;
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _events = {};
+    _selectedEvents = [];
+    _fetchSchedules();
+  }
+
+  Future<void> _fetchSchedules() async {
+    final schedules = await DBHelper().getSchedules();
+    setState(() {
+      _events = _groupSchedulesByDate(schedules);
+      _selectedEvents = _getEventsForDay(_selectedDay);
+    });
+  }
+
+  Map<DateTime, List<Schedule>> _groupSchedulesByDate(
+      List<Schedule> schedules) {
+    Map<DateTime, List<Schedule>> data = {};
+    for (var schedule in schedules) {
+      DateTime date = DateTime(schedule.startDate.year,
+          schedule.startDate.month, schedule.startDate.day);
+      if (data[date] == null) data[date] = [];
+      data[date]!.add(schedule);
+    }
+    return data;
+  }
+
+  List<Schedule> _getEventsForDay(DateTime day) {
+    return _events[day] ?? [];
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    setState(() {
+      _selectedDay = selectedDay;
+      _focusedDay = focusedDay;
+      _selectedEvents = _getEventsForDay(selectedDay);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('Calendar', style: TextStyle(color: Colors.black)),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+      ),
+      body: Column(
+        children: [
+          TableCalendar<Schedule>(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            eventLoader: _getEventsForDay,
+            onDaySelected: _onDaySelected,
+            calendarStyle: const CalendarStyle(
+              selectedDecoration: BoxDecoration(
+                color: Colors.pink,
+                shape: BoxShape.circle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: Colors.black,
+                shape: BoxShape.circle,
+              ),
+            ),
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false, // Hide the 2-week and other formats
+              titleCentered: true, // Center the title
+              titleTextFormatter: (date, locale) =>
+                  DateFormat.yMMMM(locale).format(date), // Format the title
+              titleTextStyle: const TextStyle(
+                fontSize: 20.0,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8.0),
+          Expanded(
+            child: _selectedEvents.isEmpty
+                ? const Center(child: Text('No events for this day.'))
+                : ListView.builder(
+                    itemCount: _selectedEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = _selectedEvents[index];
+                      return Card(
+                        child: ListTile(
+                          title: Text(event.title),
+                          subtitle: Text(
+                            '${DateFormat.yMMMd().add_jm().format(event.startDate)} at ${event.location}',
+                          ),
+                          onTap: () {
+                            // Optionally, navigate to a detailed view of the schedule
+                          },
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => AddSchedulePage(initialDate: _selectedDay),
+            ),
+          );
+          _fetchSchedules(); // Refresh schedules after adding a new one
+        },
+        child: const Icon(Icons.add),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+}
